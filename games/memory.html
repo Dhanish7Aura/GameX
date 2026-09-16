@@ -1,0 +1,780 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+
+    <meta charset="UTF-8">
+
+    <meta
+        name="viewport"
+        content="width=device-width, initial-scale=1.0">
+
+    <title>GameX - Memory Cards</title>
+
+    <style>
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            min-height: 100vh;
+
+            background: #080808;
+
+            color: white;
+
+            font-family: Arial, sans-serif;
+
+            display: flex;
+
+            justify-content: center;
+
+            align-items: center;
+
+            padding: 20px;
+        }
+
+        .game-container {
+
+            width: 100%;
+
+            max-width: 650px;
+
+            text-align: center;
+        }
+
+        h1 {
+
+            font-size: 42px;
+
+            margin-bottom: 8px;
+
+            background:
+                linear-gradient(
+                    90deg,
+                    #a855f7,
+                    #ec4899
+                );
+
+            -webkit-background-clip: text;
+
+            -webkit-text-fill-color: transparent;
+        }
+
+        .subtitle {
+
+            color: #aaa;
+
+            margin-bottom: 20px;
+        }
+
+        .stats {
+
+            display: flex;
+
+            justify-content: center;
+
+            gap: 50px;
+
+            margin-bottom: 20px;
+        }
+
+        .stat {
+
+            background: #151515;
+
+            border: 1px solid #292929;
+
+            border-radius: 10px;
+
+            padding: 10px 20px;
+        }
+
+        .stat-title {
+
+            color: #999;
+
+            font-size: 13px;
+
+            margin-bottom: 4px;
+        }
+
+        .stat-value {
+
+            font-size: 24px;
+
+            font-weight: bold;
+        }
+
+        .game-board {
+
+            display: grid;
+
+            grid-template-columns:
+                repeat(4, 1fr);
+
+            gap: 12px;
+
+            max-width: 520px;
+
+            margin: auto;
+        }
+
+        .card {
+
+            aspect-ratio: 1 / 1;
+
+            perspective: 700px;
+
+            cursor: pointer;
+        }
+
+        .card-inner {
+
+            width: 100%;
+
+            height: 100%;
+
+            position: relative;
+
+            transition:
+                transform 0.5s;
+
+            transform-style: preserve-3d;
+        }
+
+        .card.flipped .card-inner,
+        .card.matched .card-inner {
+
+            transform:
+                rotateY(180deg);
+        }
+
+        .card-front,
+        .card-back {
+
+            position: absolute;
+
+            width: 100%;
+
+            height: 100%;
+
+            border-radius: 12px;
+
+            backface-visibility: hidden;
+
+            display: flex;
+
+            justify-content: center;
+
+            align-items: center;
+
+            font-size: 38px;
+
+            user-select: none;
+        }
+
+        .card-back {
+
+            background:
+                linear-gradient(
+                    135deg,
+                    #a855f7,
+                    #ec4899
+                );
+
+            border: 2px solid #c084fc;
+
+            box-shadow:
+                0 0 15px
+                rgba(168, 85, 247, 0.2);
+        }
+
+        .card-back::after {
+
+            content: "?";
+
+            font-size: 38px;
+
+            font-weight: bold;
+
+            color: white;
+        }
+
+        .card-front {
+
+            background: #181818;
+
+            border: 2px solid #333;
+
+            transform:
+                rotateY(180deg);
+        }
+
+        .card.matched .card-front {
+
+            border-color: #a855f7;
+
+            box-shadow:
+                0 0 18px
+                rgba(168, 85, 247, 0.35);
+        }
+
+        .message {
+
+            min-height: 28px;
+
+            margin-top: 20px;
+
+            font-size: 18px;
+
+            font-weight: bold;
+        }
+
+        .buttons {
+
+            display: flex;
+
+            justify-content: center;
+
+            gap: 12px;
+
+            flex-wrap: wrap;
+
+            margin-top: 20px;
+        }
+
+        button,
+        .back-btn {
+
+            border: none;
+
+            padding: 12px 22px;
+
+            border-radius: 8px;
+
+            font-size: 15px;
+
+            font-weight: bold;
+
+            cursor: pointer;
+
+            text-decoration: none;
+        }
+
+        #restartBtn {
+
+            background:
+                linear-gradient(
+                    90deg,
+                    #a855f7,
+                    #ec4899
+                );
+
+            color: white;
+        }
+
+        .back-btn {
+
+            background: #222;
+
+            color: white;
+        }
+
+        button:hover,
+        .back-btn:hover {
+
+            transform: translateY(-2px);
+        }
+
+        @media (max-width: 500px) {
+
+            body {
+
+                padding: 12px;
+            }
+
+            h1 {
+
+                font-size: 32px;
+            }
+
+            .stats {
+
+                gap: 15px;
+            }
+
+            .stat {
+
+                padding: 8px 14px;
+            }
+
+            .game-board {
+
+                gap: 8px;
+            }
+
+            .card-front,
+            .card-back {
+
+                font-size: 28px;
+            }
+
+        }
+
+    </style>
+
+</head>
+
+
+<body>
+
+
+<div class="game-container">
+
+
+    <h1>🧠 Memory Cards</h1>
+
+    <p class="subtitle">
+        Find all matching pairs!
+    </p>
+
+
+    <!-- STATS -->
+
+    <div class="stats">
+
+        <div class="stat">
+
+            <div class="stat-title">
+                MOVES
+            </div>
+
+            <div
+                id="moves"
+                class="stat-value">
+                0
+            </div>
+
+        </div>
+
+
+        <div class="stat">
+
+            <div class="stat-title">
+                PAIRS
+            </div>
+
+            <div
+                id="pairs"
+                class="stat-value">
+                0 / 8
+            </div>
+
+        </div>
+
+    </div>
+
+
+    <!-- GAME BOARD -->
+
+    <div
+        id="gameBoard"
+        class="game-board">
+    </div>
+
+
+    <div
+        id="message"
+        class="message">
+    </div>
+
+
+    <!-- BUTTONS -->
+
+    <div class="buttons">
+
+        <button id="restartBtn">
+            🔄 Restart
+        </button>
+
+        <a
+            href="../index.html"
+            class="back-btn">
+            🏠 Back to GameX
+        </a>
+
+    </div>
+
+
+</div>
+
+
+<script>
+
+    // =========================
+    // CARD SYMBOLS
+    // =========================
+
+    const symbols = [
+        "🎮",
+        "🚀",
+        "👾",
+        "⚡",
+        "🔥",
+        "💎",
+        "🎯",
+        "🏆"
+    ];
+
+
+    // =========================
+    // GAME VARIABLES
+    // =========================
+
+    let cards = [];
+
+    let firstCard = null;
+
+    let secondCard = null;
+
+    let lockBoard = false;
+
+    let moves = 0;
+
+    let matchedPairs = 0;
+
+
+    // =========================
+    // ELEMENTS
+    // =========================
+
+    const gameBoard =
+        document.getElementById(
+            "gameBoard"
+        );
+
+    const movesDisplay =
+        document.getElementById(
+            "moves"
+        );
+
+    const pairsDisplay =
+        document.getElementById(
+            "pairs"
+        );
+
+    const message =
+        document.getElementById(
+            "message"
+        );
+
+    const restartBtn =
+        document.getElementById(
+            "restartBtn"
+        );
+
+
+    // =========================
+    // SHUFFLE
+    // =========================
+
+    function shuffle(array) {
+
+        for (
+            let i = array.length - 1;
+            i > 0;
+            i--
+        ) {
+
+            const j =
+                Math.floor(
+                    Math.random() * (i + 1)
+                );
+
+            [
+                array[i],
+                array[j]
+            ] =
+            [
+                array[j],
+                array[i]
+            ];
+
+        }
+
+        return array;
+    }
+
+
+    // =========================
+    // START GAME
+    // =========================
+
+    function startGame() {
+
+        gameBoard.innerHTML = "";
+
+        message.textContent = "";
+
+        moves = 0;
+
+        matchedPairs = 0;
+
+        firstCard = null;
+
+        secondCard = null;
+
+        lockBoard = false;
+
+
+        movesDisplay.textContent = "0";
+
+        pairsDisplay.textContent =
+            "0 / 8";
+
+
+        // Duplicate symbols
+
+        cards = [
+            ...symbols,
+            ...symbols
+        ];
+
+
+        shuffle(cards);
+
+
+        // Create cards
+
+        cards.forEach(
+            (symbol, index) => {
+
+                const card =
+                    document.createElement(
+                        "div"
+                    );
+
+                card.classList.add(
+                    "card"
+                );
+
+
+                card.dataset.symbol =
+                    symbol;
+
+
+                card.innerHTML = `
+
+                    <div class="card-inner">
+
+                        <div class="card-back"></div>
+
+                        <div class="card-front">
+                            ${symbol}
+                        </div>
+
+                    </div>
+
+                `;
+
+
+                card.addEventListener(
+                    "click",
+                    () => {
+
+                        flipCard(card);
+
+                    }
+                );
+
+
+                gameBoard.appendChild(
+                    card
+                );
+
+            }
+        );
+
+    }
+
+
+    // =========================
+    // FLIP CARD
+    // =========================
+
+    function flipCard(card) {
+
+        if (lockBoard) {
+            return;
+        }
+
+
+        if (
+            card === firstCard
+        ) {
+            return;
+        }
+
+
+        if (
+            card.classList.contains(
+                "matched"
+            )
+        ) {
+            return;
+        }
+
+
+        card.classList.add(
+            "flipped"
+        );
+
+
+        if (!firstCard) {
+
+            firstCard = card;
+
+            return;
+
+        }
+
+
+        secondCard = card;
+
+        moves++;
+
+        movesDisplay.textContent =
+            moves;
+
+
+        checkMatch();
+
+    }
+
+
+    // =========================
+    // CHECK MATCH
+    // =========================
+
+    function checkMatch() {
+
+        const isMatch =
+            firstCard.dataset.symbol ===
+            secondCard.dataset.symbol;
+
+
+        if (isMatch) {
+
+            disableMatchedCards();
+
+        }
+
+        else {
+
+            unflipCards();
+
+        }
+
+    }
+
+
+    // =========================
+    // MATCHED CARDS
+    // =========================
+
+    function disableMatchedCards() {
+
+        firstCard.classList.add(
+            "matched"
+        );
+
+        secondCard.classList.add(
+            "matched"
+        );
+
+
+        matchedPairs++;
+
+        pairsDisplay.textContent =
+            matchedPairs + " / 8";
+
+
+        resetTurn();
+
+
+        if (matchedPairs === 8) {
+
+            message.textContent =
+                "🎉 You found all pairs!";
+
+        }
+
+    }
+
+
+    // =========================
+    // WRONG CARDS
+    // =========================
+
+    function unflipCards() {
+
+        lockBoard = true;
+
+
+        setTimeout(() => {
+
+            firstCard.classList.remove(
+                "flipped"
+            );
+
+            secondCard.classList.remove(
+                "flipped"
+            );
+
+
+            resetTurn();
+
+        }, 800);
+
+    }
+
+
+    // =========================
+    // RESET TURN
+    // =========================
+
+    function resetTurn() {
+
+        firstCard = null;
+
+        secondCard = null;
+
+        lockBoard = false;
+
+    }
+
+
+    // =========================
+    // RESTART
+    // =========================
+
+    restartBtn.addEventListener(
+        "click",
+        startGame
+    );
+
+
+    // START
+
+    startGame();
+
+</script>
+
+
+</body>
+
+</html>

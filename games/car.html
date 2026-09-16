@@ -1,0 +1,608 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>Car Racing - GameX</title>
+
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            min-height: 100vh;
+            background: #08080f;
+            color: white;
+            font-family: Arial, sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            overflow: hidden;
+        }
+
+        .game-container {
+            width: 100%;
+            max-width: 900px;
+            text-align: center;
+            padding: 15px;
+        }
+
+        h1 {
+            font-size: 32px;
+            margin-bottom: 10px;
+        }
+
+        .stats {
+            display: flex;
+            justify-content: center;
+            gap: 35px;
+            margin-bottom: 12px;
+            font-size: 18px;
+            font-weight: bold;
+        }
+
+        .game-wrapper {
+            position: relative;
+            width: 800px;
+            max-width: 100%;
+            margin: auto;
+        }
+
+        canvas {
+            display: block;
+            width: 100%;
+            height: auto;
+            background: #222;
+            border: 3px solid #8b5cf6;
+            border-radius: 12px;
+        }
+
+        .game-over {
+            position: absolute;
+            inset: 0;
+            display: none;
+            justify-content: center;
+            align-items: center;
+            flex-direction: column;
+            background: rgba(0, 0, 0, 0.72);
+            border-radius: 12px;
+        }
+
+        .game-over h2 {
+            font-size: 42px;
+            margin-bottom: 10px;
+        }
+
+        .game-over p {
+            font-size: 20px;
+            margin-bottom: 20px;
+        }
+
+        button {
+            border: none;
+            padding: 12px 25px;
+            border-radius: 8px;
+            background: #8b5cf6;
+            color: white;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+        }
+
+        button:hover {
+            transform: scale(1.05);
+        }
+
+        .controls {
+            margin-top: 15px;
+            font-size: 15px;
+            opacity: 0.8;
+        }
+
+        .back {
+            display: inline-block;
+            margin-top: 15px;
+            color: #c4b5fd;
+            text-decoration: none;
+        }
+
+        .back:hover {
+            text-decoration: underline;
+        }
+
+        @media (max-width: 600px) {
+            h1 {
+                font-size: 25px;
+            }
+
+            .stats {
+                gap: 18px;
+                font-size: 15px;
+            }
+
+            .controls {
+                font-size: 13px;
+            }
+
+            .game-over h2 {
+                font-size: 32px;
+            }
+        }
+    </style>
+</head>
+
+<body>
+
+<div class="game-container">
+
+    <h1>🚗 Car Racing</h1>
+
+    <div class="stats">
+        <div>Score: <span id="score">0</span></div>
+        <div>Best: <span id="best">0</span></div>
+        <div>Speed: <span id="speed">1</span></div>
+    </div>
+
+    <div class="game-wrapper">
+
+        <canvas id="gameCanvas" width="800" height="600"></canvas>
+
+        <div class="game-over" id="gameOver">
+            <h2>💥 Game Over!</h2>
+            <p>Your Score: <span id="finalScore">0</span></p>
+            <button onclick="restartGame()">🔄 Restart</button>
+        </div>
+
+    </div>
+
+    <div class="controls">
+        ⬅️ ➡️ Arrow Keys / A D to move
+    </div>
+
+    <a href="../index.html" class="back">← Back to GameX</a>
+
+</div>
+
+<script>
+
+const canvas = document.getElementById("gameCanvas");
+const ctx = canvas.getContext("2d");
+
+const WIDTH = canvas.width;
+const HEIGHT = canvas.height;
+
+// =============================
+// GAME VARIABLES
+// =============================
+
+let score = 0;
+let bestScore = Number(localStorage.getItem("gamex-car-best")) || 0;
+
+let gameRunning = true;
+
+let roadOffset = 0;
+
+let enemyCars = [];
+
+let keys = {
+    left: false,
+    right: false
+};
+
+// =============================
+// PLAYER CAR
+// =============================
+
+const player = {
+    width: 55,
+    height: 95,
+    x: WIDTH / 2 - 27,
+    y: HEIGHT - 125,
+    speed: 4
+};
+
+// =============================
+// ROAD
+// =============================
+
+const road = {
+    x: 170,
+    width: 460
+};
+
+// =============================
+// ENEMY CAR
+// =============================
+
+function createEnemy() {
+
+    const lanes = [
+        road.x + 65,
+        road.x + 175,
+        road.x + 285
+    ];
+
+    const lane = lanes[Math.floor(Math.random() * lanes.length)];
+
+    enemyCars.push({
+        x: lane,
+        y: -120,
+        width: 55,
+        height: 95,
+        speed: 2.5 + Math.random() * 1.5,
+        color: Math.random() > 0.5 ? "#ef4444" : "#facc15"
+    });
+}
+
+// =============================
+// DRAW ROAD
+// =============================
+
+function drawRoad() {
+
+    // Grass
+    ctx.fillStyle = "#176b35";
+    ctx.fillRect(0, 0, WIDTH, HEIGHT);
+
+    // Road
+    ctx.fillStyle = "#333";
+    ctx.fillRect(road.x, 0, road.width, HEIGHT);
+
+    // Road edges
+    ctx.fillStyle = "#ddd";
+    ctx.fillRect(road.x, 0, 7, HEIGHT);
+    ctx.fillRect(road.x + road.width - 7, 0, 7, HEIGHT);
+
+    // Lane markings
+    ctx.fillStyle = "#fff";
+
+    const laneWidth = road.width / 4;
+
+    for (let lane = 1; lane < 4; lane++) {
+
+        const x = road.x + lane * laneWidth;
+
+        for (let y = -60 + roadOffset; y < HEIGHT; y += 100) {
+
+            ctx.fillRect(
+                x - 3,
+                y,
+                6,
+                55
+            );
+        }
+    }
+}
+
+// =============================
+// DRAW CAR
+// =============================
+
+function drawCar(car, color) {
+
+    // Main body
+    ctx.fillStyle = color;
+
+    ctx.beginPath();
+
+    ctx.roundRect(
+        car.x,
+        car.y,
+        car.width,
+        car.height,
+        10
+    );
+
+    ctx.fill();
+
+    // Windows
+    ctx.fillStyle = "#111827";
+
+    ctx.fillRect(
+        car.x + 10,
+        car.y + 15,
+        car.width - 20,
+        28
+    );
+
+    ctx.fillRect(
+        car.x + 10,
+        car.y + 52,
+        car.width - 20,
+        22
+    );
+
+    // Wheels
+    ctx.fillStyle = "#050505";
+
+    ctx.fillRect(
+        car.x - 5,
+        car.y + 15,
+        8,
+        25
+    );
+
+    ctx.fillRect(
+        car.x + car.width - 3,
+        car.y + 15,
+        8,
+        25
+    );
+
+    ctx.fillRect(
+        car.x - 5,
+        car.y + 62,
+        8,
+        25
+    );
+
+    ctx.fillRect(
+        car.x + car.width - 3,
+        car.y + 62,
+        8,
+        25
+    );
+}
+
+// =============================
+// COLLISION
+// =============================
+
+function collision(a, b) {
+
+    return (
+        a.x < b.x + b.width &&
+        a.x + a.width > b.x &&
+        a.y < b.y + b.height &&
+        a.y + a.height > b.y
+    );
+}
+
+// =============================
+// UPDATE
+// =============================
+
+function update() {
+
+    if (!gameRunning) {
+        return;
+    }
+
+    // Player movement
+    if (keys.left) {
+        player.x -= player.speed;
+    }
+
+    if (keys.right) {
+        player.x += player.speed;
+    }
+
+    // Keep player inside road
+    const leftLimit = road.x + 12;
+    const rightLimit =
+        road.x + road.width - player.width - 12;
+
+    if (player.x < leftLimit) {
+        player.x = leftLimit;
+    }
+
+    if (player.x > rightLimit) {
+        player.x = rightLimit;
+    }
+
+    // Road movement
+    roadOffset += 3;
+
+    if (roadOffset >= 100) {
+        roadOffset = 0;
+    }
+
+    // Move enemies
+    enemyCars.forEach(car => {
+
+        car.y += car.speed + score * 0.01;
+
+        // Collision
+        if (collision(player, car)) {
+            endGame();
+        }
+    });
+
+    // Remove cars
+    enemyCars = enemyCars.filter(car => {
+
+        if (car.y > HEIGHT) {
+
+            score += 10;
+
+            document.getElementById("score").textContent = score;
+
+            return false;
+        }
+
+        return true;
+    });
+
+    // Increase difficulty
+    const gameSpeed = Math.min(
+        1 + Math.floor(score / 100),
+        10
+    );
+
+    document.getElementById("speed").textContent =
+        gameSpeed;
+}
+
+// =============================
+// DRAW
+// =============================
+
+function draw() {
+
+    ctx.clearRect(
+        0,
+        0,
+        WIDTH,
+        HEIGHT
+    );
+
+    drawRoad();
+
+    // Player
+    drawCar(
+        player,
+        "#8b5cf6"
+    );
+
+    // Enemy cars
+    enemyCars.forEach(car => {
+
+        drawCar(
+            car,
+            car.color
+        );
+    });
+}
+
+// =============================
+// GAME LOOP
+// =============================
+
+function gameLoop() {
+
+    update();
+    draw();
+
+    requestAnimationFrame(gameLoop);
+}
+
+// =============================
+// ENEMY SPAWN
+// =============================
+
+setInterval(() => {
+
+    if (gameRunning) {
+        createEnemy();
+    }
+
+}, 1100);
+
+// =============================
+// KEYBOARD
+// =============================
+
+document.addEventListener(
+    "keydown",
+    e => {
+
+        if (
+            e.key === "ArrowLeft" ||
+            e.key.toLowerCase() === "a"
+        ) {
+            keys.left = true;
+            e.preventDefault();
+        }
+
+        if (
+            e.key === "ArrowRight" ||
+            e.key.toLowerCase() === "d"
+        ) {
+            keys.right = true;
+            e.preventDefault();
+        }
+    }
+);
+
+document.addEventListener(
+    "keyup",
+    e => {
+
+        if (
+            e.key === "ArrowLeft" ||
+            e.key.toLowerCase() === "a"
+        ) {
+            keys.left = false;
+        }
+
+        if (
+            e.key === "ArrowRight" ||
+            e.key.toLowerCase() === "d"
+        ) {
+            keys.right = false;
+        }
+    }
+);
+
+// =============================
+// GAME OVER
+// =============================
+
+function endGame() {
+
+    gameRunning = false;
+
+    if (score > bestScore) {
+
+        bestScore = score;
+
+        localStorage.setItem(
+            "gamex-car-best",
+            bestScore
+        );
+    }
+
+    document.getElementById("best").textContent =
+        bestScore;
+
+    document.getElementById("finalScore").textContent =
+        score;
+
+    document.getElementById("gameOver").style.display =
+        "flex";
+}
+
+// =============================
+// RESTART
+// =============================
+
+function restartGame() {
+
+    score = 0;
+
+    document.getElementById("score").textContent =
+        "0";
+
+    document.getElementById("speed").textContent =
+        "1";
+
+    player.x =
+        WIDTH / 2 - player.width / 2;
+
+    enemyCars = [];
+
+    roadOffset = 0;
+
+    gameRunning = true;
+
+    document.getElementById("gameOver").style.display =
+        "none";
+}
+
+// =============================
+// START
+// =============================
+
+document.getElementById("best").textContent =
+    bestScore;
+
+gameLoop();
+
+</script>
+
+</body>
+</html>

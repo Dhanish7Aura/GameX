@@ -1,0 +1,892 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>GameX - Pong</title>
+
+    <style>
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            min-height: 100vh;
+            background: #080808;
+            color: white;
+            font-family: Arial, sans-serif;
+
+            display: flex;
+            justify-content: center;
+            align-items: center;
+
+            padding: 20px;
+        }
+
+        .game-container {
+            width: 100%;
+            max-width: 900px;
+            text-align: center;
+        }
+
+        h1 {
+            font-size: 42px;
+            margin-bottom: 8px;
+
+            background: linear-gradient(
+                90deg,
+                #a855f7,
+                #ec4899
+            );
+
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .subtitle {
+            color: #aaa;
+            margin-bottom: 20px;
+        }
+
+        .scoreboard {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 70px;
+
+            margin-bottom: 15px;
+        }
+
+        .score-box {
+            min-width: 100px;
+        }
+
+        .score-label {
+            color: #aaa;
+            font-size: 14px;
+            margin-bottom: 5px;
+        }
+
+        .score {
+            font-size: 35px;
+            font-weight: bold;
+        }
+
+        canvas {
+            width: 100%;
+            max-width: 800px;
+            height: auto;
+
+            background: #050505;
+
+            border: 2px solid #a855f7;
+            border-radius: 12px;
+
+            box-shadow:
+                0 0 25px rgba(168, 85, 247, 0.25);
+
+            display: block;
+            margin: auto;
+        }
+
+        .controls {
+            margin-top: 18px;
+            color: #aaa;
+            line-height: 1.8;
+        }
+
+        .buttons {
+            margin-top: 20px;
+
+            display: flex;
+            justify-content: center;
+            gap: 12px;
+            flex-wrap: wrap;
+        }
+
+        button,
+        a {
+            border: none;
+            padding: 12px 22px;
+
+            border-radius: 8px;
+
+            font-size: 15px;
+            font-weight: bold;
+
+            cursor: pointer;
+
+            text-decoration: none;
+        }
+
+        #restartBtn {
+            background: linear-gradient(
+                90deg,
+                #a855f7,
+                #ec4899
+            );
+
+            color: white;
+        }
+
+        .back-btn {
+            background: #222;
+            color: white;
+        }
+
+        button:hover,
+        a:hover {
+            transform: translateY(-2px);
+        }
+
+        .message {
+            margin-top: 15px;
+            font-size: 18px;
+            font-weight: bold;
+            min-height: 25px;
+        }
+
+        @media (max-width: 600px) {
+
+            body {
+                padding: 12px;
+            }
+
+            h1 {
+                font-size: 32px;
+            }
+
+            .scoreboard {
+                gap: 35px;
+            }
+
+            .score {
+                font-size: 28px;
+            }
+
+            .controls {
+                font-size: 13px;
+            }
+
+        }
+
+    </style>
+</head>
+
+<body>
+
+    <div class="game-container">
+
+        <h1>🏓 Pong</h1>
+
+        <p class="subtitle">
+            Defeat the computer!
+        </p>
+
+        <!-- SCORE -->
+        <div class="scoreboard">
+
+            <div class="score-box">
+
+                <div class="score-label">
+                    YOU
+                </div>
+
+                <div id="playerScore" class="score">
+                    0
+                </div>
+
+            </div>
+
+            <div class="score-box">
+
+                <div class="score-label">
+                    COMPUTER
+                </div>
+
+                <div id="computerScore" class="score">
+                    0
+                </div>
+
+            </div>
+
+        </div>
+
+        <!-- GAME -->
+        <canvas
+            id="pongCanvas"
+            width="800"
+            height="500">
+        </canvas>
+
+        <div class="controls">
+
+            <strong>Controls</strong><br>
+
+            ↑ ↓ &nbsp; or &nbsp; W S &nbsp; — Move paddle<br>
+
+            First player to reach 5 points wins!
+
+        </div>
+
+        <div id="message" class="message"></div>
+
+        <div class="buttons">
+
+            <button id="restartBtn">
+                🔄 Restart
+            </button>
+
+            <a href="../index.html" class="back-btn">
+                🏠 Back to GameX
+            </a>
+
+        </div>
+
+    </div>
+
+
+    <script>
+
+        const canvas =
+            document.getElementById("pongCanvas");
+
+        const ctx =
+            canvas.getContext("2d");
+
+
+        // =========================
+        // GAME SETTINGS
+        // =========================
+
+        const paddleWidth = 12;
+        const paddleHeight = 100;
+
+        const winningScore = 5;
+
+
+        // =========================
+        // PLAYER
+        // =========================
+
+        const player = {
+
+            x: 20,
+
+            y: canvas.height / 2 - paddleHeight / 2,
+
+            width: paddleWidth,
+
+            height: paddleHeight,
+
+            speed: 7
+
+        };
+
+
+        // =========================
+        // COMPUTER
+        // =========================
+
+        const computer = {
+
+            x: canvas.width - 32,
+
+            y: canvas.height / 2 - paddleHeight / 2,
+
+            width: paddleWidth,
+
+            height: paddleHeight,
+
+            speed: 5
+
+        };
+
+
+        // =========================
+        // BALL
+        // =========================
+
+        const ball = {
+
+            x: canvas.width / 2,
+
+            y: canvas.height / 2,
+
+            radius: 9,
+
+            speed: 6,
+
+            dx: 6,
+
+            dy: 4
+
+        };
+
+
+        // =========================
+        // SCORE
+        // =========================
+
+        let playerScore = 0;
+        let computerScore = 0;
+
+        let gameRunning = true;
+
+        let keys = {};
+
+
+        // =========================
+        // KEYBOARD
+        // =========================
+
+        document.addEventListener(
+            "keydown",
+            (event) => {
+
+                keys[event.key.toLowerCase()] = true;
+
+            }
+        );
+
+
+        document.addEventListener(
+            "keyup",
+            (event) => {
+
+                keys[event.key.toLowerCase()] = false;
+
+            }
+        );
+
+
+        // =========================
+        // RESET BALL
+        // =========================
+
+        function resetBall(direction) {
+
+            ball.x = canvas.width / 2;
+
+            ball.y = canvas.height / 2;
+
+            ball.dx =
+                ball.speed * direction;
+
+            ball.dy =
+                (Math.random() * 4 - 2);
+
+        }
+
+
+        // =========================
+        // RESET GAME
+        // =========================
+
+        function restartGame() {
+
+            playerScore = 0;
+
+            computerScore = 0;
+
+            document.getElementById(
+                "playerScore"
+            ).textContent = "0";
+
+            document.getElementById(
+                "computerScore"
+            ).textContent = "0";
+
+            player.y =
+                canvas.height / 2 -
+                paddleHeight / 2;
+
+            computer.y =
+                canvas.height / 2 -
+                paddleHeight / 2;
+
+            gameRunning = true;
+
+            document.getElementById(
+                "message"
+            ).textContent = "";
+
+            resetBall(
+                Math.random() > 0.5 ? 1 : -1
+            );
+
+        }
+
+
+        document.getElementById(
+            "restartBtn"
+        ).addEventListener(
+            "click",
+            restartGame
+        );
+
+
+        // =========================
+        // PLAYER MOVEMENT
+        // =========================
+
+        function movePlayer() {
+
+            if (
+                keys["arrowup"] ||
+                keys["w"]
+            ) {
+
+                player.y -= player.speed;
+
+            }
+
+            if (
+                keys["arrowdown"] ||
+                keys["s"]
+            ) {
+
+                player.y += player.speed;
+
+            }
+
+
+            // Top boundary
+
+            if (player.y < 0) {
+
+                player.y = 0;
+
+            }
+
+
+            // Bottom boundary
+
+            if (
+                player.y + player.height >
+                canvas.height
+            ) {
+
+                player.y =
+                    canvas.height -
+                    player.height;
+
+            }
+
+        }
+
+
+        // =========================
+        // COMPUTER AI
+        // =========================
+
+        function moveComputer() {
+
+            const computerCenter =
+                computer.y +
+                computer.height / 2;
+
+            const difference =
+                ball.y - computerCenter;
+
+
+            if (difference > 10) {
+
+                computer.y +=
+                    computer.speed;
+
+            }
+
+            else if (difference < -10) {
+
+                computer.y -=
+                    computer.speed;
+
+            }
+
+
+            if (computer.y < 0) {
+
+                computer.y = 0;
+
+            }
+
+
+            if (
+                computer.y +
+                computer.height >
+                canvas.height
+            ) {
+
+                computer.y =
+                    canvas.height -
+                    computer.height;
+
+            }
+
+        }
+
+
+        // =========================
+        // BALL MOVEMENT
+        // =========================
+
+        function moveBall() {
+
+            ball.x += ball.dx;
+
+            ball.y += ball.dy;
+
+
+            // Top / bottom wall
+
+            if (
+                ball.y - ball.radius <= 0 ||
+                ball.y + ball.radius >= canvas.height
+            ) {
+
+                ball.dy *= -1;
+
+            }
+
+
+            // =========================
+            // PLAYER COLLISION
+            // =========================
+
+            if (
+
+                ball.x - ball.radius <=
+                player.x + player.width &&
+
+                ball.x + ball.radius >=
+                player.x &&
+
+                ball.y >= player.y &&
+
+                ball.y <=
+                player.y + player.height &&
+
+                ball.dx < 0
+
+            ) {
+
+                ball.x =
+                    player.x +
+                    player.width +
+                    ball.radius;
+
+                ball.dx *= -1;
+
+                changeBallAngle(player);
+
+            }
+
+
+            // =========================
+            // COMPUTER COLLISION
+            // =========================
+
+            if (
+
+                ball.x + ball.radius >=
+                computer.x &&
+
+                ball.x - ball.radius <=
+                computer.x +
+                computer.width &&
+
+                ball.y >= computer.y &&
+
+                ball.y <=
+                computer.y +
+                computer.height &&
+
+                ball.dx > 0
+
+            ) {
+
+                ball.x =
+                    computer.x -
+                    ball.radius;
+
+                ball.dx *= -1;
+
+                changeBallAngle(computer);
+
+            }
+
+
+            // =========================
+            // PLAYER SCORES
+            // =========================
+
+            if (ball.x < 0) {
+
+                computerScore++;
+
+                updateScore();
+
+                checkWinner();
+
+                if (gameRunning) {
+
+                    resetBall(1);
+
+                }
+
+            }
+
+
+            // =========================
+            // COMPUTER SCORES
+            // =========================
+
+            if (ball.x > canvas.width) {
+
+                playerScore++;
+
+                updateScore();
+
+                checkWinner();
+
+                if (gameRunning) {
+
+                    resetBall(-1);
+
+                }
+
+            }
+
+        }
+
+
+        // =========================
+        // BALL ANGLE
+        // =========================
+
+        function changeBallAngle(paddle) {
+
+            const paddleCenter =
+                paddle.y +
+                paddle.height / 2;
+
+            const difference =
+                ball.y - paddleCenter;
+
+            const normalized =
+                difference /
+                (paddle.height / 2);
+
+            ball.dy =
+                normalized * 5;
+
+
+            // Slightly increase speed
+
+            if (
+                Math.abs(ball.dx) < 11
+            ) {
+
+                ball.dx *= 1.05;
+
+            }
+
+        }
+
+
+        // =========================
+        // SCORE UPDATE
+        // =========================
+
+        function updateScore() {
+
+            document.getElementById(
+                "playerScore"
+            ).textContent =
+                playerScore;
+
+            document.getElementById(
+                "computerScore"
+            ).textContent =
+                computerScore;
+
+        }
+
+
+        // =========================
+        // WINNER
+        // =========================
+
+        function checkWinner() {
+
+            if (
+                playerScore >= winningScore
+            ) {
+
+                gameRunning = false;
+
+                document.getElementById(
+                    "message"
+                ).textContent =
+                    "🎉 You Win!";
+
+            }
+
+
+            else if (
+                computerScore >= winningScore
+            ) {
+
+                gameRunning = false;
+
+                document.getElementById(
+                    "message"
+                ).textContent =
+                    "🤖 Computer Wins!";
+
+            }
+
+        }
+
+
+        // =========================
+        // DRAW BACKGROUND
+        // =========================
+
+        function drawBackground() {
+
+            ctx.fillStyle = "#050505";
+
+            ctx.fillRect(
+                0,
+                0,
+                canvas.width,
+                canvas.height
+            );
+
+
+            // Center line
+
+            ctx.setLineDash([10, 10]);
+
+            ctx.strokeStyle = "#444";
+
+            ctx.lineWidth = 2;
+
+            ctx.beginPath();
+
+            ctx.moveTo(
+                canvas.width / 2,
+                0
+            );
+
+            ctx.lineTo(
+                canvas.width / 2,
+                canvas.height
+            );
+
+            ctx.stroke();
+
+            ctx.setLineDash([]);
+
+        }
+
+
+        // =========================
+        // DRAW PADDLE
+        // =========================
+
+        function drawPaddle(paddle) {
+
+            ctx.fillStyle = "#a855f7";
+
+            ctx.fillRect(
+                paddle.x,
+                paddle.y,
+                paddle.width,
+                paddle.height
+            );
+
+        }
+
+
+        // =========================
+        // DRAW BALL
+        // =========================
+
+        function drawBall() {
+
+            ctx.beginPath();
+
+            ctx.arc(
+                ball.x,
+                ball.y,
+                ball.radius,
+                0,
+                Math.PI * 2
+            );
+
+            ctx.fillStyle = "#ec4899";
+
+            ctx.fill();
+
+            ctx.closePath();
+
+        }
+
+
+        // =========================
+        // DRAW GAME
+        // =========================
+
+        function draw() {
+
+            drawBackground();
+
+            drawPaddle(player);
+
+            drawPaddle(computer);
+
+            drawBall();
+
+        }
+
+
+        // =========================
+        // GAME LOOP
+        // =========================
+
+        function gameLoop() {
+
+            if (gameRunning) {
+
+                movePlayer();
+
+                moveComputer();
+
+                moveBall();
+
+            }
+
+            draw();
+
+            requestAnimationFrame(
+                gameLoop
+            );
+
+        }
+
+
+        // Start game
+
+        gameLoop();
+
+    </script>
+
+</body>
+</html>
